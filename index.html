@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Agente Gemini</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <header>
+            <h1>🤖 Gemini Chat</h1>
+        </header>
+
+        <div id="chat-window" class="chat-window">
+            <!-- As mensagens vão aparecer aqui -->
+            <div class="message system">Olá! Como posso te ajudar hoje?</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Digite sua mensagem...">
+            <button id="send-btn">Enviar</button>
+        </div>
+
+        <!-- Botão de PDF que começa escondido -->
+        <form id="pdf-form" action="/gerar-pdf" method="POST" style="display: none; text-align: center; margin-top: 10px;">
+            <input type="hidden" name="prompt" id="hidden-prompt">
+            <input type="hidden" name="resposta" id="hidden-res">
+            <button type="submit" class="pdf-btn">📄 Baixar esta resposta em PDF</button>
+        </form>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const pdfForm = document.getElementById('pdf-form');
+
+        async function enviarMensagem() {
+            const prompt = userInput.value;
+            if (!prompt) return;
+
+            // Adiciona mensagem do usuário na tela
+            appendMessage('user', prompt);
+            userInput.value = '';
+
+            // Mostra que a IA está "pensando"
+            const loadingMsg = appendMessage('system', 'Digitando...');
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+                
+                // Remove o "Digitando..." e coloca a resposta real
+                loadingMsg.remove();
+                appendMessage('ai', data.resposta);
+
+                // Prepara e mostra o botão de PDF
+                document.getElementById('hidden-prompt').value = prompt;
+                document.getElementById('hidden-res').value = data.resposta;
+                pdfForm.style.display = 'block';
+
+            } catch (err) {
+                loadingMsg.innerText = "Erro ao conectar com a IA.";
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const div = document.createElement('div');
+            div.classList.add('message', sender);
+            div.innerText = text;
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return div;
+        }
+
+        sendBtn.onclick = enviarMensagem;
+        userInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') enviarMensagem(); });
+    </script>
+</body>
+</html>
